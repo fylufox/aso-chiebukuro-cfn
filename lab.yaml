@@ -4,10 +4,13 @@ Parameters:
     Type: AWS::EC2::KeyPair::KeyName
 
 Resources:
+# Network Settings
   MyVPC:
     Type: 'AWS::EC2::VPC'
     Properties:
       CidrBlock: 172.31.0.0/16
+      EnableDnsHostnames: True
+      EnableDnsSupport: True
       Tags:
         - Key: Name
           Value: !Join ["_", [!Ref 'AWS::StackName']]
@@ -96,6 +99,7 @@ Resources:
       SubnetId: !Ref PublicSubnet2
       RouteTableId: !Ref PublicRouteTable
 
+# Security Settings
   PubInstanceSG:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -117,7 +121,7 @@ Resources:
         ToPort: '-1'
         CidrIp: 0.0.0.0/0
 
-
+# Instance Settings
   Pub1Instance:
     Type: AWS::EC2::Instance
     Properties:
@@ -171,3 +175,92 @@ Resources:
       Tags:
         - Key: Name
           Value: Pri2.secondaryDB
+
+# Cloudwatch Settings
+  Pri1CloudwatcheAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: True
+      AlarmName: !Join ["_",[!Ref 'AWS::StackName',Pri1_CA]]
+      AlarmDescription: !Join [ " " , [!Ref Pri1Instance,helth check]]
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Dimensions: 
+        - Name: InstanceId
+          Value: !Ref Pri1Instance
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Period: 300
+      Statistic: Maximum
+      Threshold: 1
+  Pri2CloudwatcheAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      ActionsEnabled: True
+      AlarmName: !Join ["_",[!Ref 'AWS::StackName',Pri2_CA]]
+      AlarmDescription: !Join [ " " , [!Ref Pri2Instance,helth check]]
+      MetricName: StatusCheckFailed
+      Namespace: AWS/EC2
+      Dimensions: 
+        - Name: InstanceId
+          Value: !Ref Pri1Instance
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      EvaluationPeriods: 1
+      Period: 300
+      Statistic: Maximum
+      Threshold: 1
+
+# Local Domain Settings
+  route53HostedZone:
+    Type: AWS::Route53::HostedZone
+    Properties:
+      Name: !Join [".",[!Ref 'AWS::StackName',local]] 
+      HostedZoneConfig:
+        Comment: Lab VPC private hostedzone 
+      VPCs:
+        - VPCId: !Ref MyVPC
+          VPCRegion: !Sub ${AWS::Region}
+  Pri1HelthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        AlarmIdentifier: 
+          Name: !Join ["_",[!Ref 'AWS::StackName',Pri1_CA]]
+          Region: !Sub ${AWS::Region}
+        Type: CLOUDWATCH_METRIC
+        InsufficientDataHealthStatus: Unhealthy
+    DependsOn: Pri1CloudwatcheAlarm
+  Pri2HelthCheck:
+    Type: AWS::Route53::HealthCheck
+    Properties:
+      HealthCheckConfig:
+        AlarmIdentifier: 
+          Name: !Join ["_",[!Ref 'AWS::StackName',Pri1_CA]]
+          Region: !Sub ${AWS::Region}
+        Type: CLOUDWATCH_METRIC
+        InsufficientDataHealthStatus: Unhealthy
+    DependsOn: Pri2CloudwatcheAlarm
+  route53RSPri1:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Join [".",[maindb,!Ref 'AWS::StackName',local]] 
+      Type: A
+      TTL: 60
+      Failover: PRIMARY
+      HealthCheckId: !Ref Pri1HelthCheck
+      HostedZoneId: !Ref route53HostedZone
+      ResourceRecords: 
+      - !GetAtt Pri1Instance.PrivateIp
+      SetIdentifier: dbdomain_pri1
+  route53RSPri2:
+    Type: AWS::Route53::RecordSet
+    Properties:
+      Name: !Join [".",[maindb,!Ref 'AWS::StackName',local]] 
+      Type: A
+      TTL: 60
+      Failover: SECONDARY
+      HealthCheckId: !Ref Pri2HelthCheck
+      HostedZoneId: !Ref route53HostedZone
+      ResourceRecords: 
+      - !GetAtt Pri2Instance.PrivateIp
+      SetIdentifier: dbdomain_pri2
