@@ -8,7 +8,6 @@ Parameters:
   S3BucketName:
     Description: S3 Backet Name
     Type: String
-    Default: !Ref 'AWS::StackName'
 
 Resources: 
 # VPC Settings
