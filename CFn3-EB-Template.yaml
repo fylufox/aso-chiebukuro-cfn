@@ -27,6 +27,9 @@ Resources:
           - Namespace: aws:autoscaling:asg
             OptionName: MaxSize
             Value: '1'
+          - Namespace: aws:elasticbeanstalk:environment
+            OptionName: LoadBalancerType
+            Value: application
           - Namespace: aws:ec2:vpc
             OptionName: VPCId
             Value: !ImportValue ChiebukuroVPCID
