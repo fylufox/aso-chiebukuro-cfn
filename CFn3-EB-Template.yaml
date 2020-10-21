@@ -1,0 +1,53 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: ASO-Chiebukuro Elastic BEanstalk Template.
+
+Parameters: 
+  AppName:
+    Description: Application Name
+    Type: String
+
+Resources: 
+  ElasticBeanstalkApp:
+    Type: AWS::ElasticBeanstalk::Application
+    Properties:
+      ApplicationName: !Ref AppName
+      Description: ns2018_Graduation_work
+  ElasticBeanstalkEnv:
+    Type: AWS::ElasticBeanstalk::Environment
+    DependsOn: ElasticBeanstalkApp
+    Properties:
+      ApplicationName: !Ref AppName
+      Description: !Join ["_",[!Ref AppName,Environment]]
+      EnvironmentName: !Join ["-",[!Ref AppName,Env]]
+      SolutionStackName: 64bit Amazon Linux 2 v3.1.1 running Python 3.7
+      OptionSettings:
+          - Namespace: aws:autoscaling:asg
+            OptionName: MinSize
+            Value: '1'
+          - Namespace: aws:autoscaling:asg
+            OptionName: MaxSize
+            Value: '1'
+          - Namespace: aws:ec2:vpc
+            OptionName: VPCId
+            Value: !ImportValue ChiebukuroVPCID
+          - Namespace : aws:ec2:vpc
+            OptionName: Subnets
+            Value: !Join [",", [!ImportValue  ChiebukuroPublicSubnet1ID , !ImportValue ChiebukuroPublicSubnet2ID]]
+          - Namespace: aws:elasticbeanstalk:environment
+            OptionName: ServiceRole
+            Value: aws-elasticbeanstalk-service-role
+          - Namespace: aws:autoscaling:launchconfiguration
+            OptionName: IamInstanceProfile
+            Value: aws-elasticbeanstalk-ec2-role
+
+Outputs:  
+  AppName:
+    Description: Elastic Benastalk Aplication Name
+    Value: !Ref AppName
+    Export: 
+      Name: EBAppname
+  EnvName:
+    Description: Elastic Beanstalk Environment Name
+    Value: !Join ["-",[!Ref AppName,Env]]
+    Export: 
+      Name: EBEnvironment
