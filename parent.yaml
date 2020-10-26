@@ -23,7 +23,7 @@ Resources:
   InstanceS3:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: ./CFn1-VPC-Template/s3-instnace-template.yaml
+      TemplateURL: ./CFn1-VPC-Template/s3-instance-template.yaml
       Parameters:
         MyKey: !Ref Mykeypair
         vpcId: !GetAtt Network.Outoput.VPCID
