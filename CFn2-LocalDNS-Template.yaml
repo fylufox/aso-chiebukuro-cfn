@@ -10,6 +10,21 @@ Parameters:
     Description: Cloud Watche Alarm Name.
     Type: String
     Default: aso-chiebukuro
+  MainDBID:
+    Description: Main DB instance Id
+    Type: String
+  MainDBIP:
+    Description: Main DB instance Id
+    Type: String
+  SecondaryDBID:
+    Description: Secondary DB instance Id
+    Type: String
+  SecondaryDBIP:
+    Description: Secondary DB instance Id
+    Type: String
+  vpcId:
+    Description: VPC ID
+    Type: String
 
 Resources: 
 # Cloud Watche Settings
@@ -28,7 +43,7 @@ Resources:
       AlarmName: !Join ["_" , [!Ref CWAName , Maindb ]]
       Dimensions: 
         - Name: InstanceId
-          Value: !ImportValue ChiebukuroMainDBID
+          Value: !Ref MainDBID
   SecondaryDBAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -44,7 +59,7 @@ Resources:
       AlarmName: !Join ["_" , [!Ref CWAName , Secondarydb ]]
       Dimensions: 
         - Name: InstanceId
-          Value: !ImportValue ChiebukuroSecondaryDBID
+          Value: !Ref SecondaryDBID
 
 # local Domain Settings
   route53HostedZone:
@@ -54,8 +69,7 @@ Resources:
       HostedZoneConfig:
         Comment: ASO-Chiebukuro VPC private hostedzone.
       VPCs:
-        - 
-          VPCId: !ImportValue ChiebukuroVPCID
+        - VPCId: !Ref vpcId
           VPCRegion: !Sub ${AWS::Region}
   MainDBHelthCheck:
     Type: AWS::Route53::HealthCheck
@@ -85,7 +99,7 @@ Resources:
       HealthCheckId: !Ref MainDBHelthCheck
       HostedZoneId: !Ref route53HostedZone
       ResourceRecords: 
-      - !ImportValue ChiebukuroMainDBIP
+      - !Ref MainDBIP
       SetIdentifier: maindb
   DBRecordSecondary:
     Type: AWS::Route53::RecordSet
@@ -97,5 +111,5 @@ Resources:
       HealthCheckId: !Ref SecondaryDBHelthCheck
       HostedZoneId: !Ref route53HostedZone
       ResourceRecords: 
-      - !ImportValue ChiebukuroSecondaryDBIP
+      - !Ref SecondaryDBIP
       SetIdentifier: secondarydb

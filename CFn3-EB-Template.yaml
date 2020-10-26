@@ -5,6 +5,16 @@ Parameters:
   AppName:
     Description: Application Name
     Type: String
+  vpcId:
+    Description: vpc id
+    Type: String
+  PublicSubnet1:
+    Description: Public subnet id
+    Type: String
+  PublicSubnet2:
+    Description: Public subnet id
+    Type: String
+
 
 Resources: 
   ElasticBeanstalkApp:
@@ -32,10 +42,10 @@ Resources:
             Value: application
           - Namespace: aws:ec2:vpc
             OptionName: VPCId
-            Value: !ImportValue ChiebukuroVPCID
+            Value: !Ref vpcId
           - Namespace : aws:ec2:vpc
             OptionName: Subnets
-            Value: !Join [",", [!ImportValue  ChiebukuroPublicSubnet1ID , !ImportValue ChiebukuroPublicSubnet2ID]]
+            Value: !Join [",", [!Ref  PublicSubnet1 , !Ref PublicSubnet2]]
           - Namespace: aws:elasticbeanstalk:environment
             OptionName: ServiceRole
             Value: aws-elasticbeanstalk-service-role

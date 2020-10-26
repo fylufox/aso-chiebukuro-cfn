@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Setiing up aso-chiebukuro environment. 
+
+Parameters: 
+  Mykeypair:
+    Description: Keypair Name
+    Type: AWS::EC2::KeyPair::KeyName
+  S3BucketName:
+    Description: S3 Backet Name
+    Type: String
+  LocalDomainName: 
+    Description: local domain name.(xxx.local)
+    Type: String
+    Default: aso-chiebukuro
+
+Resources: 
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        StackName: !Ref 'AWS::StackName'
+      TemplateURL: ./CFn1-VPC-Template/vpc-template.yaml
+  InstanceS3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./CFn1-VPC-Template/s3-instnace-template.yaml
+      Parameters:
+        MyKey: !Ref Mykeypair
+        vpcId: !GetAtt Network.Outoput.VPCID
+        Pub1InstanceSubnet: !GetAtt Network.Output.PublicSubnet1ID
+        Db1InstanceSubnet: !GetAtt Network.Output.PrivateSubnet1ID
+        Db2InstanceSubnet: !GetAtt Network.Output.PrivateSubnet2ID
+        S3BucketName: !Ref S3BucketName
+
+  LocalDNS:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./CFn2-LocalDNS-Template.yaml
+      Parameters:
+        LocalDomain: !Ref LocalDomainName
+        CWAName: !Ref 'AWS::StackName'
+        vpcId: !GetAtt Network.Outoput.VPCID
+        MainDBID: !GetAtt InstanceS3.Output.MainDBInstanceID
+        MainDBIP: !GetAtt InstanceS3.Output.SecondaryDBInstanceID
+        SecondaryDBID: !GetAtt InstanceS3.Output.MainDBInstanceIP
+        SecondaryDBIP: !GetAtt InstanceS3.Output.SecondaryDBInstanceIP
+
+  ElasticBenastalk:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: ./CFn3-EB-Template.yaml
+      Parameters:
+        AppName: !Ref 'AWS::StackName'
+        vpcId: !GetAtt Network.Outoput.VPCID
+        PublicSubnet1: !GetAtt Network.Output.PublicSubnet1ID
+        PublicSubnet2: !GetAtt Network.Output.PublicSubnet2ID
+        
+Outputs:
+  LocalDomain:
+    Description: VPC Local Domain Name
+    Value: !Join [ "." , [!Ref LocalDomainName,"local"]]
+    Export: 
+      Name: !Join [ "_" , [!Ref 'AWS::StackName',"Local_Domain_Name."]]
+  S3BucketName:
+    Description: Create S3 Bucket Name
+    Value: !GetAtt InstanceS3.Output.S3BucketName
+    Export: 
+      Name: !Join [ "_" , [!Ref 'AWS::StackName',"createed_Bucket_Name."]]

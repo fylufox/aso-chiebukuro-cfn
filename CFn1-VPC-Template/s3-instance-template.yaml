@@ -1,0 +1,128 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: s3 and instance settings.
+
+Parameters: 
+  Mykey:
+    Description: Keypair Name
+    Type: AWS::EC2::KeyPair::KeyName
+  vpcId:
+    Description: vpc id.
+    Type: String
+  Pub1InstanceSubnet:
+    Description: Pub1 instace subnet
+    Type: String
+  Db1InstanceSubnet:
+    Description: Main DB instace subnet
+    Type: String
+  Db2InstanceSubnet:
+    Description: Secondary DB instace subnet
+    Type: String
+  S3BucketName:
+    Description: create s3 bucket name
+    Type: String
+
+Resources: 
+# Security Settings
+  MaintenanceSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for Maintenance Instance
+      VpcId: !Ref vpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+  DBSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: SG for DB Instance 
+      VpcId: !Ref vpcId
+      SecurityGroupIngress:
+        - IpProtocol: 'tcp'
+          FromPort: 22
+          ToPort: 22
+          SourceSecurityGroupId: !Ref MaintenanceSG
+        - IpProtocol: 'tcp'
+          FromPort: 3306
+          ToPort: 3306
+          CidrIp: 172.31.0.0/16
+
+# Instance Settings
+  Pub1Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref Mykey
+      ImageId: ami-0947d2ba12ee1ff75
+      InstanceType: t2.micro
+      SubnetId: !Ref Pub1InstanceSubnet
+      SecurityGroupIds:
+        - !Ref MaintenanceSG
+      UserData: 
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          curl -sS https://github.com/fylufox.keys >> /home/ec2-user/.ssh/authorized_keys
+          hostnamectl set-hostname Pub1.inet
+      Tags:
+        - Key: Name
+          Value: Pub1
+  Pri1Instance:
+    Type: AWS::EC2::Instance
+    Properties: 
+      KeyName: !Ref Mykey
+      ImageId: ami-0ff2eb01ede014f22
+      InstanceType: t2.micro
+      SubnetId: !Ref Db1InstanceSubnet
+      PrivateIpAddress: '172.31.2.10'
+      SecurityGroupIds:
+        - !Ref DBSG
+      UserData: 
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          curl -sS https://github.com/fylufox.keys >> /home/ec2-user/.ssh/authorized_keys
+          hostnamectl set-hostname Pri1.db
+      Tags:
+        - Key: Name
+          Value: Pri1.mainDB
+  Pri2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      KeyName: !Ref Mykey
+      ImageId: ami-0ff2eb01ede014f22
+      InstanceType: t2.micro
+      SubnetId: !Ref Db2InstanceSubnet
+      PrivateIpAddress: '172.31.3.10'
+      SecurityGroupIds:
+        - !Ref DBSG
+      UserData: 
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          curl -sS https://github.com/fylufox.keys >> /home/ec2-user/.ssh/authorized_keys
+          hostnamectl set-hostname Pri2.db
+      Tags:
+        - Key: Name
+          Value: Pri2.secondaryDB
+
+# create BucketName
+  s3Bucket:
+    Type: AWS::S3::Bucket
+    Properties: 
+      AccessControl: Private
+      BucketName: !Ref S3BucketName
+
+Outputs:
+  MainDBInstanceID:
+    Description: MainDB Instance ID
+    Value: !Ref Pri1Instance
+  SecondaryDBInstanceID:
+    Description: MainDB Secondary ID
+    Value: !Ref Pri2Instance
+  MainDBInstanceIP:
+    Description: MainDB Instance Private IP
+    Value: !GetAtt Pri1Instance.PrivateIp
+  SecondaryDBInstanceIP:
+    Description: SecondaryDB Instance Private IP
+    Value: !GetAtt Pri2Instance.PrivateIp
+  S3BucketName:
+    Description: Create S3 Bucket Name
+    Value: !Ref s3Bucket
