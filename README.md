@@ -23,7 +23,7 @@
 - S3BucketName  
     The name of the generated S3 bucket.  
     Type: String
-- LocalDomainName 
+- LocalDomainName   
     local domain name.(xxx.local)  
     Type: String  
     Default: aso-chiebukuro
