@@ -1,4 +1,10 @@
 # Aso Chiebukuro CFn-Template
+## __This template is not available.__
+The AMI used in this template has been removed.
+
+## Architecture
+![CloudFormation-ページ1](https://user-images.githubusercontent.com/50024121/119765289-f90f7b00-beed-11eb-91f7-976cce12e09b.png)
+
 ## How to deploy
 1. execute script  
    ```./packaging.sh bucketname aws_profile responsefile```
